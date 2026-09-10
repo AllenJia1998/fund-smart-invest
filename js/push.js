@@ -456,8 +456,9 @@ function schedulePoll() {
 
 const elapsedSec = () => Math.max(0, Math.round((Date.now() - genStartAt) / 1000));
 
-function setHint(html) {
+function setHint(html, warn = false) {
   genHint.className = 'small faint mt-8';
+  genHint.style.color = warn ? 'var(--warn)' : '';
   genHint.innerHTML = html;
 }
 
@@ -501,6 +502,7 @@ async function startGenerate() {
 
   let finishedId = null;
   let failed = false;
+  let failureNoted = false; // 是否已展示过具体的失败原因（避免被通用文案覆盖）
 
   try {
     await streamSSE(
@@ -519,27 +521,36 @@ async function startGenerate() {
             setHint(`报告生成完成，用时 ${elapsedSec()} 秒。`);
           } else if (stage === 'failed') {
             failed = true;
+            failureNoted = true;
             stopTicker();
             toast(p?.message || '报告生成失败', 'error');
-            setHint(escapeHtml(p?.message || '报告生成失败'));
+            setHint(escapeHtml(p?.message || '报告生成失败'), true);
           }
         },
         // 生成结束：拿到报告 id
         report: (r) => {
           finishedId = r?.id ?? null;
-          if (r?.status === 'failed') failed = true;
+          if (r?.status === 'failed') {
+            failed = true;
+            // 若上面已给出具体错误，则保留更精确的提示
+            if (!failureNoted) setHint('报告生成失败，可在右栏查看失败原因并重新生成。', true);
+          }
         },
         error: (e) => {
           failed = true;
+          failureNoted = true;
           stopTicker();
           toast(e?.message || '生成失败', 'error');
+          setHint(`生成失败：${escapeHtml(e?.message || '未知错误')}`, true);
         },
       }
     );
   } catch (error) {
     failed = true;
+    failureNoted = true;
     stopTicker();
     toast(`生成请求失败：${error.message}`, 'error');
+    setHint(`生成请求失败：${escapeHtml(error.message)}`, true);
   } finally {
     generating = false;
     stopTicker();
@@ -551,7 +562,6 @@ async function startGenerate() {
 
   if (failed) {
     unlockButton('📋 手动生成报告');
-    if (!genHint.innerHTML) setHint('生成失败，可稍后重试。');
     return;
   }
 
@@ -560,7 +570,6 @@ async function startGenerate() {
     unlockButton('📋 手动生成报告');
     setHint('生成约需 1–3 分钟，请勿重复点击。');
   }, 1600);
-  if (!genHint.textContent) setHint(`报告生成完成，用时 ${elapsedSec()} 秒。`);
 }
 
 /* ------------------------------ 事件绑定 ------------------------------ */
