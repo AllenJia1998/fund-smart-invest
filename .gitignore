@@ -13,3 +13,7 @@ data/
 
 # OCR 编译中间产物
 tools/ocr/.build-cache/
+
+# 本地渲染验证产物
+.shots/
+.chrome-profile*/

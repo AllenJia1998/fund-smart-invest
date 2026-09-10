@@ -42,6 +42,8 @@ const state = {
   files: [], // 待发送附件 [{ key, file, name, size, isImage, url }]
   sending: false, // 是否正在流式生成
   abort: null, // 当前请求的 AbortController
+  usage: null, // 最近一次的 token 用量（usage 事件）
+  stick: true, // 是否跟随最新消息（用户手动上滑后置 false）
 };
 
 /* ============================== 页面骨架 ============================== */
@@ -109,6 +111,7 @@ function init() {
   renderMessages(); // 初始为空状态
   bindComposer();
   bindChatArea();
+  bindScrollFollow();
   bindHistory();
   bindCapabilities();
   refreshSessions();
@@ -194,12 +197,45 @@ function ensureList() {
   return list;
 }
 
-/** 滚动到底部；force=false 时仅在接近底部才跟随（避免打断用户回看历史） */
+/** 是否已接近底部 */
+function isNearBottom(el) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+}
+
+/**
+ * 滚动到底部。
+ * force=true：强制吸底（发送、切换会话、工具状态变化）；
+ * 否则仅在"跟随模式"下吸底 —— 流式输出期间始终保持跟随，
+ * 用户手动上滑回看历史时自动解除跟随。
+ */
 function scrollToBottom(force = false) {
   const el = $('#chatScroll');
   if (!el) return;
-  const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
-  if (force || nearBottom) el.scrollTop = el.scrollHeight;
+  if (force) state.stick = true;
+  if (state.stick) el.scrollTop = el.scrollHeight;
+}
+
+/** 跟踪用户的手动滚动，决定是否继续跟随流式输出 */
+function bindScrollFollow() {
+  const el = $('#chatScroll');
+  el.addEventListener(
+    'wheel',
+    (e) => {
+      if (e.deltaY < 0) state.stick = false;
+      else if (isNearBottom(el)) state.stick = true;
+    },
+    { passive: true }
+  );
+  el.addEventListener(
+    'touchmove',
+    () => {
+      if (!isNearBottom(el)) state.stick = false;
+    },
+    { passive: true }
+  );
+  el.addEventListener('scroll', () => {
+    if (isNearBottom(el)) state.stick = true;
+  });
 }
 
 /* ========================= 流式助手气泡（工具过程） ========================= */
@@ -321,6 +357,7 @@ async function send(textOverride) {
   }
 
   setSending(true);
+  state.stick = true; // 新消息：恢复跟随模式
   input.value = '';
   autoGrow();
 
@@ -354,7 +391,6 @@ async function send(textOverride) {
 
   const controller = new AbortController();
   state.abort = controller;
-  let sessionMissing = false;
 
   try {
     // streamSSE 返回 Promise，读完整条流后 resolve（不依赖 done 事件收尾）
@@ -420,7 +456,7 @@ async function send(textOverride) {
         tools: assistant.steps(),
       });
     }
-    if (!sessionMissing) refreshSessions();
+    refreshSessions(); // 新会话 / 标题 / 时间会变化，刷新右侧列表
     input.focus();
   }
 }

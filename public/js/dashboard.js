@@ -143,14 +143,14 @@ function renderFunds() {
 /* ============================ 渲染：榜单 ============================ */
 
 function renderRanks() {
-  const draw = (list, el) => {
+  const draw = (list, el, kind) => {
     if (list.length === 0) {
       el.innerHTML = '<div class="small faint" style="padding:14px 0;text-align:center">今日无符合条件基金</div>';
       return;
     }
     el.innerHTML = list
       .map(
-        (f, i) => `<div class="rank-item ${i === 0 ? 'top' : ''}" data-code="${f.code}">
+        (f, i) => `<div class="rank-item ${i === 0 ? kind : ''}" data-code="${f.code}">
           <span class="rank-index">${i + 1}</span>
           <span class="rank-name" title="${escapeHtml(f.name ?? '')}">${escapeHtml(f.name ?? f.code)}</span>
           <span class="rank-val ${pctClass(f.livePct)}">${fmtPct(f.livePct)}</span>
@@ -158,8 +158,8 @@ function renderRanks() {
       )
       .join('');
   };
-  draw(state.data.gainers, $('#gainers'));
-  draw(state.data.losers, $('#losers'));
+  draw(state.data.gainers, $('#gainers'), 'top');
+  draw(state.data.losers, $('#losers'), 'bottom');
 }
 
 /* ============================ 渲染：走势图 ============================ */

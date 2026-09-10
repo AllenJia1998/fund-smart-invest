@@ -498,7 +498,6 @@ async function startGenerate() {
   generating = true;
   lockButton();
   startTicker('正在采集数据…');
-  setHint('已提交生成请求，正在采集基金行情与实时资讯…');
 
   let finishedId = null;
   let failed = false;
