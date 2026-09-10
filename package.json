@@ -1,0 +1,16 @@
+{
+  "name": "fund-smart-invest",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "基金智投 — 实时基金行情 + DeepSeek Agent + 每日智能推送",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "ocr": "bash tools/ocr/build.sh",
+    "seed": "node scripts/seed-kb.js"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

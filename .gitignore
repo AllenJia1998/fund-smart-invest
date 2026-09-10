@@ -1,3 +1,15 @@
 .DS_Store
 node_modules/
 *.log
+
+# 本地凭据与缓存（切勿提交）
+.gh-config/
+.npm-cache/
+.env
+
+# 运行时数据（会话、报告、知识库索引、上传文件）
+data/
+!data/.gitkeep
+
+# OCR 编译中间产物
+tools/ocr/.build-cache/

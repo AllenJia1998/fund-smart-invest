@@ -1,47 +1,233 @@
-# NOVA 优选 · 电商商城演示站
+# 基金智投 · FundSmartInvest
 
-一个现代、响应式的电商商城静态站点，使用纯 HTML / CSS / JavaScript 构建，可直接部署到 GitHub Pages。
+一个自建的**基金投研终端**：实时基金行情 + DeepSeek Agent 对话 + 每日智能推送。
+零第三方 Node 依赖，深色专业金融终端界面。
 
-## 功能特性
+```
+┌──────────────┬─────────────────────────────────────────────┐
+│  基金智投     │  行情看板  ·  AI 对话  ·  每日推送              │
+│  ─────────   │                                             │
+│  📊 行情看板  │   实时净值 / 盘中估值 / 走势图 / 涨跌幅榜        │
+│  💬 AI 对话   │   DeepSeek Agent（工具 · 技能 · 知识库 · OCR）   │
+│  🔔 每日推送  │   资讯聚合 → 持仓诊断 → 趋势预测                 │
+└──────────────┴─────────────────────────────────────────────┘
+```
 
-- 🏠 首屏 Hero + 品牌介绍
-- 🛍️ 商品网格 + 分类筛选（数码 / 家居 / 服饰 / 美妆 / 食品 / 运动）
-- 🛒 购物车抽屉（本地存储持久化，支持数量增减、移除、合计）
-- ✨ 服务保障、关于我们、订阅表单等模块
-- 📱 完全响应式，适配手机 / 平板 / 桌面
-- ⚡ 零依赖、零构建，纯静态文件
+---
 
-## 本地预览
-
-直接用任意静态服务器打开即可，例如：
+## 一、快速开始
 
 ```bash
-python3 -m http.server 8080
-# 然后访问 http://localhost:8080
+cd /Users/allenjia/learnEco
+
+# 1. 配置 DeepSeek API Key（三选一）
+#    a) 环境变量：export DEEPSEEK_API_KEY=sk-xxx
+#    b) 项目根目录创建 .env（参考 .env.example）
+#    c) 若本机装有 DeepSeek Harness，会自动复用 ~/.dsh/.credentials.yaml
+cp .env.example .env && vi .env
+
+# 2. 启动（无需 npm install，零依赖）
+npm start
+#    → http://127.0.0.1:5173
+
+# 3. 可选：导入知识库种子文档
+npm run seed
 ```
 
-## 部署到 GitHub Pages
+打开 http://127.0.0.1:5173 即为行情看板；左侧可切换 `AI 对话` 与 `每日推送`。
 
-1. 在 GitHub 新建一个空仓库（例如 `nova-shop`）
-2. 推送代码：
+---
 
-```bash
-git init
-git add .
-git commit -m "init: nova shop site"
-git remote add origin git@github.com:AllenJia1998/nova-shop.git
-git push -u origin main
+## 二、三大模块
+
+### 1. 行情看板（`/`）
+
+- **实时行情**：批量拉取自选基金的当日单位净值、累计净值、日涨跌幅；交易时段内优先使用**盘中估值**（GSZ/GSZZL），盘后回落到最新净值口径，界面上标注当前采用的哪一种。
+- **净值走势图**：手写 SVG 折线图（无图表库），支持 **7天 / 1月 / 3月 / 6月 / 1年 / 3年** 六个区间切换，带面积渐变、网格、悬停十字线与数据提示框。
+- **主题分类**：按 混合 / 消费 / 医疗 / 煤炭 / 科技 / 电力 / 红利 / 黄金 筛选，每个分类显示基金数量。
+- **涨跌幅榜**：右侧展示自选池内今日涨幅 Top5 与跌幅 Top5（红涨绿跌，符合中国市场惯例）。
+- **自选管理**：搜索基金代码或名称（如输入"白酒"）加入自选，卡片悬停可移除。
+
+### 2. AI 对话（`/chat.html`）
+
+一个完整的 **Agent harness**，不只是套壳调用模型：
+
+| 能力 | 实现 |
+|---|---|
+| **流式输出** | 基于 SSE 的逐字流式渲染，实时重渲染 Markdown |
+| **工具调用** | 8 个 Function Calling 工具，Agent 自主决定调用顺序并多轮推理后作答 |
+| **技能挂载** | `skills/*/SKILL.md`，可在界面上开关；挂载后指令注入系统提示 |
+| **知识库** | 本地 TF-IDF 检索（中英文 2-gram 分词），命中片段自动注入上下文 |
+| **图片解读** | macOS Vision 框架 OCR（Swift 原生二进制），中英文识别 |
+| **文档解读** | DOCX / XLSX 走内置 ZIP 解析器；PDF 走流式解压 + 文本算子提取；纯文本直接解码 |
+| **会话管理** | 多会话持久化，历史对话可回溯 |
+
+内置可调用的工具：
+
+```
+search_fund          按名称/代码搜索基金
+get_fund_quote       批量实时行情（净值、涨跌幅、盘中估值）
+get_fund_history     历史净值序列 + 多周期涨幅
+get_fund_detail      基金详情（类型/规模/经理/风险等级/投资策略）
+get_fund_ranking     全市场涨幅榜 / 跌幅榜
+get_financial_news   实时财经快讯与政策公告
+search_knowledge     本地知识库检索
+calculate            安全表达式求值（收益率、复利、仓位计算）
 ```
 
-3. 在仓库 **Settings → Pages** 中，将 Source 设为 `main` 分支、根目录 `/`
-4. 稍等片刻，即可通过 `https://AllenJia1998.github.io/nova-shop/` 访问
+### 3. 每日推送（`/push.html`）
 
-## 目录结构
+- **资讯聚合**：并行抓取 东方财富 7×24 快讯 / 新浪财经滚动 / 沪深公告，去重后按 政策·宏观·市场·行业·国际 五维自动分类。
+- **持仓诊断**：把每只自选基金的实时净值 + 多周期涨幅 + 近 10 日净值序列，与当日资讯一并交给分析模型。
+- **结构化产出**：市场综述、逐只基金的 `操作建议 / 置信度 / 理由 / 短期展望 / 中长期展望`、综合操作总结表、整体仓位建议、结论与免责声明。
+- **数据回填**：报告中所有数值字段由后端用真实行情覆盖，模型只负责判断与文字，避免数值幻觉。
+- **定时任务**：内置极简 cron（默认工作日 14:10，`PUSH_CRON` 可配），也可在界面上手动生成。
+
+---
+
+## 三、数据源说明（重要）
+
+### 关于支付宝 · 蚂蚁财富接口
+
+需求要求接入蚂蚁财富接口。实测结论如下：
 
 ```
-.
-├── index.html        # 首页
-├── css/style.css     # 样式
-├── js/main.js        # 交互逻辑
-└── README.md
+$ curl -s -o /dev/null -w "%{http_code}" "https://fundmobapi.alipay.com/fundprod/fund/Detail.json?fundCode=000001"
+000                      # 连接失败
+$ nslookup fundmobapi.alipay.com
+                         # 无解析结果（公网 DNS 层不可达）
 ```
+
+**`fundmobapi.alipay.com` 在公网 DNS 层面无法解析**，因此无法直接调用。
+
+项目的处理方式：
+
+1. **数据源做成可插拔 Provider**（`server/providers/`），业务代码不感知具体源。
+2. 实现了完整的 **`antfortune` Provider**（`providers/antfortune.js`），包含 Detail / NetValueTrend / RankList / Search 四个接口的对接与字段映射。
+3. 启动时自动探测可达性，**不可达则降级到 `eastmoney` Provider**，并把降级事实暴露在接口与界面上（`/api/funds/source`、侧边栏底部、看板右下角），不做静默伪装。
+4. 若在可访问蚂蚁财富的网络环境（内网代理 / 出口白名单），设置 `FUND_PROVIDER=antfortune` 即可切换，无需改动任何业务代码。
+
+### 关于数据口径
+
+`eastmoney`（天天基金/东方财富）与蚂蚁财富展示的基金净值**同源**，都是基金公司披露的官方净值数据，因此切换数据源不会改变净值口径。
+
+使用的公开接口（均无需鉴权）：
+
+| 接口 | 用途 |
+|---|---|
+| `fundmobapi.eastmoney.com/FundMNewApi/FundMNFInfo` | 批量实时行情 |
+| `fundmobapi.eastmoney.com/FundMNewApi/FundMNDetailInformation` | 基金详情 |
+| `fund.eastmoney.com/pingzhongdata/{code}.js` | 完整历史净值 + 区间收益 |
+| `fund.eastmoney.com/data/rankhandler.aspx` | 排行榜 |
+| `fundsuggest.eastmoney.com/FundSearch/...` | 基金搜索 |
+| `newsapi.eastmoney.com/kuaixun/...` | 7×24 快讯 |
+| `feed.mix.sina.com.cn/api/roll/get` | 新浪财经滚动新闻 |
+| `np-anotice-stock.eastmoney.com/api/security/ann` | 沪深公告 |
+
+### 关于模型能力边界
+
+DeepSeek 公开 API 目前仅支持 `deepseek-flash` 与 `deepseek-v4-pro`，**不支持图片输入**（发送图片会得到 `[Unsupported Image]`）。
+
+因此图片解读不走模型视觉通道，而是由 **harness 侧补齐**：
+
+- 图片 → `tools/ocr/ocr-bin`（Swift + macOS Vision 框架编译的原生二进制，支持 zh-Hans / en-US）→ 文本 → 交给模型解读。
+- 该二进制由 `npm run ocr` 编译（`tools/ocr/build.sh`）。脚本把 Swift 模块缓存重定向到仓库内，以适配受限沙箱。
+
+---
+
+## 四、目录结构
+
+```
+learnEco/
+├── server/
+│   ├── index.js              # HTTP 服务入口（零依赖）
+│   ├── config.js             # 配置与凭据解析
+│   ├── lib/
+│   │   ├── http.js           # 请求体/JSON/SSE/静态文件/上游抓取
+│   │   ├── router.js         # 极简路由器
+│   │   └── store.js          # JSON 持久化 + TTL 缓存
+│   ├── providers/
+│   │   ├── index.js          # 数据源选择与降级
+│   │   ├── eastmoney.js      # 天天基金（当前生效）
+│   │   └── antfortune.js     # 支付宝蚂蚁财富（可插拔）
+│   ├── services/
+│   │   ├── llm.js            # DeepSeek 客户端（流式 / 工具 / JSON 模式）
+│   │   ├── agent.js          # Agent 执行器（harness 核心）
+│   │   ├── tools.js          # 工具注册表
+│   │   ├── skills.js         # 技能挂载
+│   │   ├── kb.js             # 知识库（TF-IDF 检索）
+│   │   ├── extract.js        # OCR + 文档解析
+│   │   ├── funds.js          # 基金业务服务
+│   │   ├── news.js           # 资讯聚合
+│   │   └── push.js           # 每日推送与定时任务
+│   └── routes/               # funds / chat / push / kb / system
+├── public/
+│   ├── index.html            # 行情看板
+│   ├── chat.html             # AI 对话
+│   ├── push.html             # 每日推送
+│   ├── css/app.css           # 设计系统
+│   └── js/{app,dashboard,chat,push}.js
+├── skills/                   # 可挂载技能（SKILL.md）
+│   ├── fund-analysis/
+│   ├── risk-control/
+│   └── attachment-reading/
+├── knowledge/                # 知识库种子文档
+├── tools/ocr/                # Swift OCR 源码 + 编译产物
+├── scripts/seed-kb.js
+└── data/                     # 运行时数据（会话/报告/知识库索引）
+```
+
+---
+
+## 五、API 一览
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/api/status` | 系统状态（模型、数据源、OCR、技能、工具、知识库） |
+| GET | `/api/funds/dashboard` | 看板聚合（自选行情 + 分类 + 涨跌幅榜） |
+| GET | `/api/funds/source` | 数据源健康与降级状态 |
+| GET | `/api/funds/search?q=` | 基金搜索 |
+| GET | `/api/funds/:code` | 基金详情 |
+| GET | `/api/funds/:code/series?range=` | 净值序列（7d/1m/3m/6m/1y/3y） |
+| GET | `/api/funds/ranking?dir=&limit=` | 全市场排行榜 |
+| GET/POST | `/api/watchlist` | 自选列表 / 添加 |
+| DELETE | `/api/watchlist/:code` | 移除自选 |
+| GET | `/api/news?limit=&category=` | 资讯聚合 |
+| GET | `/api/skills` · POST `/api/skills/:name/mount` | 技能列表 / 挂载开关 |
+| GET | `/api/tools` | 工具清单 |
+| GET/POST | `/api/kb` · DELETE `/api/kb/:id` | 知识库管理 |
+| GET/POST | `/api/sessions` · GET/DELETE `/api/sessions/:id` | 会话管理 |
+| POST | `/api/chat` | **SSE 流式对话**（支持附件） |
+| GET | `/api/push/reports` · GET/DELETE `/api/push/reports/:id` | 报告列表 / 详情 |
+| POST | `/api/push/generate` | **SSE 生成报告**（带进度） |
+
+---
+
+## 六、配置项
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `DEEPSEEK_API_KEY` | — | 必填（或放 `.env`） |
+| `DEEPSEEK_MODEL` | `deepseek-flash` | 对话主模型 |
+| `DEEPSEEK_ANALYST_MODEL` | `deepseek-v4-pro` | 投研分析模型 |
+| `FUND_PROVIDER` | `eastmoney` | 行情数据源 |
+| `PORT` | `5173` | 服务端口 |
+| `PUSH_CRON` | `10 14 * * 1-5` | 定时生成日报 |
+| `QUOTE_TTL_MS` | `20000` | 行情缓存时长 |
+
+---
+
+## 七、已知限制
+
+1. **蚂蚁财富接口不可达**（见第三节），当前使用同源的天天基金数据；Provider 已实现，网络可达时改配置即可切换。
+2. **无视觉模型通道**：图片解读依赖本机 macOS Vision OCR，非 macOS 环境需替换 `tools/ocr/` 实现。
+3. **PDF 仅支持文本层**：扫描件 PDF 无文本层，需先转图片再走 OCR。
+4. **数据为演示级**：未做用户体系、鉴权与并发限流，仅供本地单机使用。
+5. **投资建议由 AI 生成**，仅供参考，不构成投资建议。
+
+---
+
+## 八、免责声明
+
+本项目为技术演示。所有行情与资讯来自公开接口，投资建议由 AI 基于公开数据生成，
+**仅供参考，不构成任何投资建议**。基金投资有风险，历史业绩不代表未来表现，入市需谨慎。
