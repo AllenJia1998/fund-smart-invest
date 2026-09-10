@@ -63,7 +63,9 @@ const deepseek = resolveDeepSeekKey();
 const envFile = readEnvFile();
 
 export const config = {
-  port: Number(process.env.PORT ?? envFile.PORT ?? 5173),
+  // 默认 5399 而非 5173：后者常被 Vite 等前端脚手架占用（本机确有其它项目在用），
+  // 端口重叠会导致浏览器访问到错误的站点。
+  port: Number(process.env.PORT ?? envFile.PORT ?? 5399),
   host: process.env.HOST ?? '127.0.0.1',
 
   deepseek: {

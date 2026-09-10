@@ -28,13 +28,13 @@ cp .env.example .env && vi .env
 
 # 2. 启动（无需 npm install，零依赖）
 npm start
-#    → http://127.0.0.1:5173
+#    → http://127.0.0.1:5399
 
 # 3. 可选：导入知识库种子文档
 npm run seed
 ```
 
-打开 http://127.0.0.1:5173 即为行情看板；左侧可切换 `AI 对话` 与 `每日推送`。
+打开 http://127.0.0.1:5399 即为行情看板；左侧可切换 `AI 对话` 与 `每日推送`。
 
 ---
 
@@ -211,7 +211,7 @@ learnEco/
 | `DEEPSEEK_MODEL` | `deepseek-flash` | 对话主模型 |
 | `DEEPSEEK_ANALYST_MODEL` | `deepseek-v4-pro` | 投研分析模型 |
 | `FUND_PROVIDER` | `eastmoney` | 行情数据源 |
-| `PORT` | `5173` | 服务端口 |
+|  `PORT` | `5399` | 服务端口 |
 | `PUSH_CRON` | `10 14 * * 1-5` | 定时生成日报 |
 | `QUOTE_TTL_MS` | `20000` | 行情缓存时长 |
 
