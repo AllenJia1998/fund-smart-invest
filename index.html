@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NOVA 优选 — 精选好物，品质生活。正品保障、极速发货、30 天无忧退换。" />
+  <title>NOVA 优选 · 精选好物电商商城</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛍️</text></svg>" />
+</head>
+<body>
+  <!-- 顶部公告栏 -->
+  <div class="topbar">
+    <span>🎉 新用户专享：全场满 199 减 30，限时进行中</span>
+  </div>
+
+  <!-- 导航栏 -->
+  <header class="header" id="header">
+    <div class="container header-inner">
+      <a href="#" class="logo">NOVA<span>优选</span></a>
+      <nav class="nav">
+        <a href="#home" class="active">首页</a>
+        <a href="#products">全部商品</a>
+        <a href="#features">服务保障</a>
+        <a href="#about">关于我们</a>
+      </nav>
+      <div class="header-actions">
+        <button class="cart-btn" id="cartBtn" aria-label="购物车">
+          <span class="cart-icon">🛒</span>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 首屏 Hero -->
+    <section class="hero" id="home">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <span class="hero-badge">✨ 每日精选 · 品质好物</span>
+          <h1>把生活过得<br /><em>更有质感</em></h1>
+          <p>严选全球好物，正品保障、极速发货。NOVA 优选，让每一次购物都安心省心。</p>
+          <div class="hero-cta">
+            <a href="#products" class="btn btn-primary">立即选购</a>
+            <a href="#about" class="btn btn-ghost">了解更多</a>
+          </div>
+          <div class="hero-stats">
+            <div class="stat"><strong>50万+</strong><span>会员信赖</span></div>
+            <div class="stat"><strong>99.7%</strong><span>好评率</span></div>
+            <div class="stat"><strong>24h</strong><span>极速发货</span></div>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="blob"></div>
+          <div class="hero-card card-a">🎧</div>
+          <div class="hero-card card-b">⌚</div>
+          <div class="hero-card card-c">🛍️</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 商品区 -->
+    <section class="products" id="products">
+      <div class="container">
+        <div class="section-head">
+          <h2>精选好物</h2>
+          <p>人气爆款 · 限时特惠</p>
+        </div>
+
+        <!-- 分类筛选 -->
+        <div class="filters" id="filters">
+          <button class="filter-chip active" data-cat="all">全部</button>
+          <button class="filter-chip" data-cat="数码">数码</button>
+          <button class="filter-chip" data-cat="家居">家居</button>
+          <button class="filter-chip" data-cat="服饰">服饰</button>
+          <button class="filter-chip" data-cat="美妆">美妆</button>
+          <button class="filter-chip" data-cat="食品">食品</button>
+          <button class="filter-chip" data-cat="运动">运动</button>
+        </div>
+
+        <div class="grid" id="productGrid">
+          <!-- 商品卡片（由 main.js 渲染） -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 服务保障 -->
+    <section class="features" id="features">
+      <div class="container features-inner">
+        <div class="feature">
+          <span class="feature-icon">🚚</span>
+          <h3>极速发货</h3>
+          <p>全国大部分地区 24 小时内发出</p>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🛡️</span>
+          <h3>正品保障</h3>
+          <p>官方授权，假一赔十</p>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">↩️</span>
+          <h3>30 天退换</h3>
+          <p>不满意随时退，无忧售后</p>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🎧</span>
+          <h3>7×24 客服</h3>
+          <p>贴心服务，随时为你解答</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 关于我们 -->
+    <section class="about" id="about">
+      <div class="container about-inner">
+        <div class="about-text">
+          <span class="section-tag">关于 NOVA</span>
+          <h2>用心挑选，<em>每一件好物</em></h2>
+          <p>NOVA 优选成立于 2024 年，专注为消费者甄选高性价比的优质商品。我们相信，好的电商不仅卖货，更传递一种从容、体面的生活方式。</p>
+          <ul class="about-list">
+            <li>✔ 严苛选品标准，层层把关</li>
+            <li>✔ 透明价格，无隐形消费</li>
+            <li>✔ 绿色包装，环保先行</li>
+          </ul>
+        </div>
+        <div class="about-card" aria-hidden="true">
+          <div class="about-num">1000+</div>
+          <div class="about-label">精选 SKU</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 订阅 -->
+    <section class="newsletter">
+      <div class="container newsletter-inner">
+        <div>
+          <h3>订阅优惠资讯</h3>
+          <p>第一时间获取新品与专属折扣，绝无垃圾邮件。</p>
+        </div>
+        <form class="newsletter-form" id="newsletterForm">
+          <input type="email" placeholder="输入你的邮箱" required />
+          <button type="submit" class="btn btn-primary">订阅</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="logo">NOVA<span>优选</span></a>
+        <p>精选好物，品质生活。</p>
+      </div>
+      <div class="footer-col">
+        <h4>购物指南</h4>
+        <a href="#">购物流程</a>
+        <a href="#">会员介绍</a>
+        <a href="#">常见问题</a>
+      </div>
+      <div class="footer-col">
+        <h4>售后服务</h4>
+        <a href="#">退换货政策</a>
+        <a href="#">价格保护</a>
+        <a href="#">联系客服</a>
+      </div>
+      <div class="footer-col">
+        <h4>关于我们</h4>
+        <a href="#">公司简介</a>
+        <a href="#">加入我们</a>
+        <a href="#">隐私政策</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 NOVA 优选 · 演示站点 | 使用 GitHub Pages 构建</p>
+    </div>
+  </footer>
+
+  <!-- 购物车抽屉 -->
+  <div class="overlay" id="overlay"></div>
+  <aside class="cart-drawer" id="cartDrawer" aria-label="购物车">
+    <div class="cart-head">
+      <h3>购物车 <span id="cartHeadCount">(0)</span></h3>
+      <button class="cart-close" id="cartClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="cart-body" id="cartBody">
+      <div class="cart-empty">
+        <span>🛒</span>
+        <p>购物车还是空的，去挑点好物吧～</p>
+      </div>
+    </div>
+    <div class="cart-foot" id="cartFoot">
+      <div class="cart-total">
+        <span>合计</span>
+        <strong id="cartTotal">¥0</strong>
+      </div>
+      <button class="btn btn-primary btn-block" id="checkoutBtn">去结算</button>
+    </div>
+  </aside>
+
+  <!-- Toast 提示 -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
