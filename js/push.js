@@ -16,6 +16,7 @@ import {
   toast,
   mountShell,
   renderMarkdown,
+  handleAuthError,
 } from './app.js';
 
 /* ------------------------------- 状态 ------------------------------- */
@@ -431,6 +432,14 @@ async function selectReport(id) {
     renderDetail(report);
   } catch (error) {
     if (token !== selectToken) return;
+    if (error?.code === 'UNAUTHORIZED') {
+      detailEl.innerHTML = `
+        <div class="detail-center">
+          <span class="empty-icon">🔐</span>
+          <div class="muted">查看报告详情需要访问口令，请点击左下角「⚙ 连接设置」输入。</div>
+        </div>`;
+      return;
+    }
     detailEl.innerHTML = `
       <div class="detail-center">
         <span class="empty-icon">⚠️</span>
@@ -549,8 +558,13 @@ async function startGenerate() {
     failed = true;
     failureNoted = true;
     stopTicker();
-    toast(`生成请求失败：${error.message}`, 'error');
-    setHint(`生成请求失败：${escapeHtml(error.message)}`, true);
+    if (await handleAuthError(error, '生成报告')) {
+      // 口令缺失/错误或触发限流：已弹出设置引导或限流提示
+      setHint(escapeHtml(error.message), true);
+    } else {
+      toast(`生成请求失败：${error.message}`, 'error');
+      setHint(`生成请求失败：${escapeHtml(error.message)}`, true);
+    }
   } finally {
     generating = false;
     stopTicker();

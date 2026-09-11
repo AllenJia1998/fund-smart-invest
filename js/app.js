@@ -50,13 +50,65 @@ export function fmtSize(bytes) {
 
 /* ------------------------------- API ------------------------------- */
 
+/**
+ * API 基址。
+ * 解析优先级：
+ *   1. localStorage 覆盖（可在页面上随时改，无需重新部署）
+ *   2. js/config.js 注入的 window.__API_BASE__
+ *   3. 空字符串 = 与后端同源（本地直接访问时）
+ */
+const BACKEND_KEY = 'fsi_api_base';
+
+export function getApiBase() {
+  const stored = localStorage.getItem(BACKEND_KEY);
+  if (stored) return stored.replace(/\/$/, '');
+  return String(window.__API_BASE__ ?? '').replace(/\/$/, '');
+}
+
+export function setApiBase(url) {
+  const value = String(url ?? '').trim().replace(/\/$/, '');
+  if (value) localStorage.setItem(BACKEND_KEY, value);
+  else localStorage.removeItem(BACKEND_KEY);
+}
+
+export function apiUrl(path) {
+  return getApiBase() + path;
+}
+
+/** 是否处于"前端已部署、后端在别处"的分离模式。 */
+export function isSplitDeploy() {
+  return getApiBase() !== '';
+}
+
+/** 访问口令：保存在 localStorage，随请求头 X-Access-Code 发送。 */
+const CODE_KEY = 'fsi_access_code';
+
+export function getAccessCode() {
+  return localStorage.getItem(CODE_KEY) ?? '';
+}
+
+export function setAccessCode(code) {
+  if (code) localStorage.setItem(CODE_KEY, code);
+  else localStorage.removeItem(CODE_KEY);
+}
+
+function authHeaders() {
+  const code = getAccessCode();
+  return code ? { 'X-Access-Code': code } : {};
+}
+
 export async function api(path, { method = 'GET', body } = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...authHeaders() },
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    const error = new Error(data.error || '需要访问口令');
+    error.code = 'UNAUTHORIZED';
+    throw error;
+  }
   if (!res.ok || data.ok === false) {
     throw new Error(data.error || `请求失败 (${res.status})`);
   }
@@ -68,15 +120,25 @@ export async function api(path, { method = 'GET', body } = {}) {
  * handlers: { [eventName]: (data) => void, error, done }
  */
 export async function streamSSE(path, body, handlers = {}, signal) {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify(body ?? {}),
     signal,
   });
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => '');
-    throw new Error(text || `请求失败 (${res.status})`);
+    let message = `请求失败 (${res.status})`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.error) message = parsed.error;
+    } catch {
+      if (text) message = text.slice(0, 200);
+    }
+    const error = new Error(message);
+    if (res.status === 401) error.code = 'UNAUTHORIZED';
+    if (res.status === 429) error.code = 'RATE_LIMITED';
+    throw error;
   }
 
   const reader = res.body.getReader();
@@ -111,6 +173,91 @@ export async function streamSSE(path, body, handlers = {}, signal) {
     }
   }
   if (handlers.done) handlers.done();
+}
+
+/* --------------------------- 口令设置弹窗 --------------------------- */
+
+/**
+ * 弹出「连接设置」窗口：可填写访问口令与后端地址。
+ * @param {{requireCode?: boolean, reason?: string}} options
+ * @returns {Promise<boolean>} 是否已保存
+ */
+export function openSettings({ requireCode = false, reason = '' } = {}) {
+  return new Promise((resolve) => {
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask';
+    mask.innerHTML = `
+      <div class="modal" style="width:min(460px,100%)">
+        <div class="modal-head">
+          <h3>连接设置</h3>
+          <button class="btn btn-sm btn-ghost" data-close>✕</button>
+        </div>
+        <div class="modal-body">
+          ${reason ? `<div class="small" style="color:var(--warn);margin-bottom:14px;line-height:1.6">${escapeHtml(reason)}</div>` : ''}
+          <div class="field">
+            <label>访问口令${requireCode ? '（必填）' : ''}</label>
+            <input class="input" id="cfgCode" placeholder="例如：054X-5OTX-45PB-FRW5" value="${escapeHtml(getAccessCode())}" autocomplete="off" />
+            <div class="small faint" style="margin-top:6px">用于解锁 AI 对话与报告生成；行情与资讯无需口令。</div>
+          </div>
+          <div class="field">
+            <label>后端地址（可选）</label>
+            <input class="input" id="cfgBase" placeholder="留空表示与页面同源" value="${escapeHtml(getApiBase())}" autocomplete="off" />
+            <div class="small faint" style="margin-top:6px">前端部署在 GitHub Pages 时，填写后端隧道地址，例如 https://xxx.trycloudflare.com</div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn" data-close>取消</button>
+          <button class="btn btn-primary" id="cfgSave">保存</button>
+        </div>
+      </div>`;
+    document.body.appendChild(mask);
+
+    const done = (ok) => {
+      mask.remove();
+      resolve(ok);
+    };
+    mask.addEventListener('click', (e) => {
+      if (e.target === mask || e.target.closest('[data-close]')) done(false);
+    });
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') {
+        document.removeEventListener('keydown', onEsc);
+        done(false);
+      }
+    });
+    mask.querySelector('#cfgSave').addEventListener('click', () => {
+      const code = mask.querySelector('#cfgCode').value.trim();
+      if (requireCode && !code) {
+        toast('请填写访问口令', 'error');
+        return;
+      }
+      setAccessCode(code);
+      setApiBase(mask.querySelector('#cfgBase').value);
+      toast('设置已保存，正在重新加载…');
+      setTimeout(() => location.reload(), 600);
+      done(true);
+    });
+    mask.querySelector('#cfgCode').focus();
+  });
+}
+
+/**
+ * 统一处理受保护接口的失败：口令缺失或错误时引导用户填写。
+ * @returns {boolean} 是否已处理
+ */
+export async function handleAuthError(error, actionLabel = '该功能') {
+  if (error?.code === 'UNAUTHORIZED') {
+    await openSettings({
+      requireCode: true,
+      reason: `${actionLabel}需要访问口令。请输入管理员提供访问码后重试。`,
+    });
+    return true;
+  }
+  if (error?.code === 'RATE_LIMITED') {
+    toast(error.message, 'error', 5000);
+    return true;
+  }
+  return false;
 }
 
 /* ------------------------------ Toast ------------------------------ */
@@ -163,6 +310,9 @@ export function mountShell({ active, title, subtitle = '', actionsHtml = '' }) {
         <div class="sidebar-foot" id="sidebarFoot">
           <div><span class="dot ok"></span>连接中…</div>
         </div>
+        <button class="nav-item" id="btnSettings" style="margin-top:6px;font-size:12.5px">
+          <span class="nav-icon">⚙</span><span>连接设置</span>
+        </button>
       </aside>
       <main class="main">
         <header class="topbar">
@@ -176,6 +326,7 @@ export function mountShell({ active, title, subtitle = '', actionsHtml = '' }) {
       </main>
     </div>`;
 
+  $('#btnSettings')?.addEventListener('click', () => openSettings({}));
   renderStatus();
   return { content: $('#content'), sidebarFoot: $('#sidebarFoot') };
 }
