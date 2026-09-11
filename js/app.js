@@ -71,6 +71,15 @@ export function setApiBase(url) {
   else localStorage.removeItem(BACKEND_KEY);
 }
 
+/**
+ * 仅返回「用户手动保存过」的后端地址覆盖；没有显式覆盖时返回 null。
+ * 用于设置弹窗的回显：不要用自动探测值预填，否则会误把旧的部署地址
+ * 固化进 localStorage，覆盖掉 config.js 里的最新地址。
+ */
+export function getStoredApiBase() {
+  return localStorage.getItem(BACKEND_KEY) ?? null;
+}
+
 export function apiUrl(path) {
   return getApiBase() + path;
 }
@@ -201,8 +210,11 @@ export function openSettings({ requireCode = false, reason = '' } = {}) {
           </div>
           <div class="field">
             <label>后端地址（可选）</label>
-            <input class="input" id="cfgBase" placeholder="留空表示与页面同源" value="${escapeHtml(getApiBase())}" autocomplete="off" />
-            <div class="small faint" style="margin-top:6px">前端部署在 GitHub Pages 时，填写后端隧道地址，例如 https://xxx.trycloudflare.com</div>
+            <input class="input" id="cfgBase" placeholder="留空 = 自动检测（推荐）" value="${escapeHtml(getStoredApiBase() ?? '')}" autocomplete="off" />
+            <div class="small faint" style="margin-top:6px">通常<b>留空</b>即可，会自动使用部署好的后端地址；只有自己另外部署了后端时才需要手动填。</div>
+          </div>
+          <div class="field" style="margin-bottom:4px">
+            <button class="btn btn-sm btn-ghost" id="cfgReset" style="color:var(--warn)">↺ 清除已保存的后端地址，恢复自动检测</button>
           </div>
         </div>
         <div class="modal-foot">
@@ -236,6 +248,12 @@ export function openSettings({ requireCode = false, reason = '' } = {}) {
       toast('设置已保存，正在重新加载…');
       setTimeout(() => location.reload(), 600);
       done(true);
+    });
+    // 一键清除后端地址覆盖，恢复自动检测
+    mask.querySelector('#cfgReset').addEventListener('click', () => {
+      setApiBase('');
+      mask.querySelector('#cfgBase').value = '';
+      toast('已恢复自动检测后端地址，保存后生效');
     });
     mask.querySelector('#cfgCode').focus();
   });
