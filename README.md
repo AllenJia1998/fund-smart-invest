@@ -231,3 +231,89 @@ learnEco/
 
 本项目为技术演示。所有行情与资讯来自公开接口，投资建议由 AI 基于公开数据生成，
 **仅供参考，不构成任何投资建议**。基金投资有风险，历史业绩不代表未来表现，入市需谨慎。
+
+---
+
+## 九、公网部署（前后端分离）
+
+### 为什么必须分离
+
+**GitHub Pages 只能托管静态文件，无法运行任何服务端代码。** 本站的 AI 对话、资讯聚合、
+定时任务、数据持久化都依赖 Node 后端，因此无法整体部署到 GitHub Pages。
+
+采用的方案是前后端分离：
+
+```
+┌─────────────────────────────┐         ┌──────────────────────────────────┐
+│  GitHub Pages（静态前端）    │  HTTPS  │  本机 Node 后端                   │
+│  allenjia1998.github.io/    │ ─CORS─▶ │  + Cloudflare 隧道（公网入口）     │
+│  fund-smart-invest/         │         │  LLM 调用 / 数据抓取 / 持久化      │
+└─────────────────────────────┘         └──────────────────────────────────┘
+```
+
+- 前端 `public/` 通过 `git subtree` 推到 `gh-pages` 分支
+- 后端由 `cloudflared` 快速隧道暴露为公网 HTTPS 地址
+- 前端 `public/js/config.js` 里按访问来源自动切换后端地址：
+  `*.github.io` 走隧道地址，本地/局域网走同源
+
+### 一键部署
+
+```bash
+# 1. 启动后端 + 公网隧道（首次会自动下载 cloudflared）
+bash scripts/tunnel.sh
+#    → 输出形如 https://xxx-xxx-xxx-xxx.trycloudflare.com
+
+# 2. 把前端推到 GitHub Pages，并自动写入后端地址
+bash scripts/deploy-pages.sh
+```
+
+部署脚本会在推送前自检后端可达性，避免上线一个连不通的地址。
+
+### ⚠️ 快速隧道的重要限制
+
+Cloudflare 快速隧道（`trycloudflare.com`）**无需账号**，但：
+
+| 限制 | 影响 |
+|---|---|
+| 地址每次重启都变 | 隧道重启后需重新执行 `deploy-pages.sh` |
+| 进程关闭即失效 | 关掉终端或重启电脑后站点 API 不可用 |
+| 无可用性保证 | Cloudflare 官方明示不适合生产环境 |
+
+**要长期稳定在线**，需要换成以下之一：
+
+1. **Cloudflare 命名隧道**：注册 Cloudflare 账号 + 一个域名（可用免费域名），
+   地址固定，`cloudflared tunnel create` 后配置 DNS 即可
+2. **PaaS 平台**（Render / Railway / Fly.io）：把后端整体部署上去，
+   注意需要持久化磁盘（会话与报告落盘在 `data/`），并把 `PUSH_CRON` 定时任务交给平台调度
+3. **自备 VPS**：`git clone` 后 `npm start`，用 Nginx 反代 + systemd 守护
+
+### 访问控制
+
+公网开放后，消耗 DeepSeek 额度的功能必须保护。当前的策略是**按接口粒度鉴权**：
+
+| 接口 | 保护 |
+|---|---|
+| `GET /api/funds/*`、`GET /api/news`、`GET /api/status` | 公开（只读） |
+| `POST /api/chat` | 🔐 口令 + 每 IP 每分钟 12 次 |
+| `POST /api/push/generate` | 🔐 口令 + 每 IP 每小时 5 次 |
+| `/api/sessions*`（会话内容） | 🔐 口令 |
+| `POST /api/kb`、`DELETE /api/kb/:id`、技能挂载 | 🔐 口令 |
+
+访问口令的解析优先级：
+
+1. 环境变量 `ACCESS_CODE`
+2. `.env` 文件中的 `ACCESS_CODE`
+3. **未配置时自动生成**并持久化到 `data/access-code.txt`（重启不变），启动日志会打印
+
+前端在首次调用受保护接口收到 401 时，会弹出「连接设置」引导输入口令，
+口令保存在浏览器 `localStorage`，通过请求头 `X-Access-Code` 发送。
+
+自定义限流阈值：`RATE_CHAT`（默认 12/分钟）、`RATE_REPORT`（默认 5/小时）。
+
+### 跨域配置
+
+默认 `CORS_ORIGINS=*`（允许任意来源）。若要收紧到只允许自己的 Pages 站点：
+
+```bash
+CORS_ORIGINS=https://allenjia1998.github.io npm start
+```
