@@ -299,7 +299,20 @@ Cloudflare 快速隧道（`trycloudflare.com`）**无需账号**，但：
 | `/api/sessions*`（会话内容） | 🔐 口令 |
 | `POST /api/kb`、`DELETE /api/kb/:id`、技能挂载 | 🔐 口令 |
 
-访问口令的解析优先级：
+#### 口令存放在哪里、怎么查看
+
+| 方式 | 位置 |
+|---|---|
+| **一键查看**（推荐） | `npm run code` |
+| 持久化文件 | `data/access-code.txt` |
+| 启动日志 | 每次 `npm start` 都会在控制台打印；重定向后用 `grep 访问口令 data/server.log` |
+| 自定义 | 设环境变量 `ACCESS_CODE`，或写进 `.env` 的 `ACCESS_CODE=...` |
+
+口令只存在于**本机**，不会出现在 GitHub Pages 的静态文件里，公网访客无法获取。
+
+#### 解析优先级
+
+
 
 1. 环境变量 `ACCESS_CODE`
 2. `.env` 文件中的 `ACCESS_CODE`

@@ -8,7 +8,10 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "ocr": "bash tools/ocr/build.sh",
-    "seed": "node scripts/seed-kb.js"
+    "seed": "node scripts/seed-kb.js",
+    "code": "bash scripts/show-code.sh",
+    "tunnel": "bash scripts/tunnel.sh",
+    "deploy": "bash scripts/deploy-pages.sh"
   },
   "engines": {
     "node": ">=20.19.0"
