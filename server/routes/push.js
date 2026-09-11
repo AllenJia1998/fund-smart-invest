@@ -1,5 +1,6 @@
 /** 每日推送路由：报告列表 / 详情 / 生成（SSE 进度）/ 删除。 */
 import { openSse, sendJson } from '../lib/http.js';
+import { guard, reportLimiter } from '../lib/auth.js';
 import { generateReport, getReport, listReports, removeReport } from '../services/push.js';
 
 export function registerPushRoutes(router) {
@@ -18,7 +19,13 @@ export function registerPushRoutes(router) {
   });
 
   /** 生成报告：SSE 推送进度，避免长请求超时。 */
-  router.post('/api/push/generate', async ({ res, body, req }) => {
+  router.post('/api/push/generate', async ({ res, body, req, url }) => {
+    // 单次生成消耗额度较大：口令 + 每小时次数上限
+    const denied = guard(req, url, reportLimiter);
+    if (denied) {
+      sendJson(res, { ok: false, error: denied.error, code: denied.code }, denied.status);
+      return;
+    }
     const sse = openSse(res);
     const abort = new AbortController();
     req.on('close', () => abort.abort());

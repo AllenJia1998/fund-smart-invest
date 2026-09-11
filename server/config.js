@@ -6,7 +6,7 @@
  *   2. 项目根目录 .env 文件
  *   3. DeepSeek Harness 的凭据文件 ~/.dsh/.credentials.yaml
  */
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -62,11 +62,53 @@ function resolveDeepSeekKey() {
 const deepseek = resolveDeepSeekKey();
 const envFile = readEnvFile();
 
+/**
+ * 访问口令：保护消耗 DeepSeek 额度的接口。
+ * 未显式配置时自动生成并持久化到 data/access-code.txt，
+ * 保证「默认即受保护」且重启后口令不变。
+ */
+function resolveAccessCode() {
+  const explicit = process.env.ACCESS_CODE ?? envFile.ACCESS_CODE;
+  if (explicit) return { code: explicit, generated: false };
+
+  const file = join(ROOT, 'data', 'access-code.txt');
+  if (existsSync(file)) {
+    const saved = readFileSync(file, 'utf8').trim();
+    if (saved) return { code: saved, generated: false };
+  }
+  const code = Array.from({ length: 4 }, () =>
+    Math.random().toString(36).slice(2, 6).toUpperCase()
+  ).join('-');
+  try {
+    const dir = join(ROOT, 'data');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(file, code, 'utf8');
+  } catch {
+    /* 写不了也不影响启动，只是口令每次变化 */
+  }
+  return { code, generated: true };
+}
+
+const access = resolveAccessCode();
+
+/** 允许跨域的来源：GitHub Pages 等静态前端会跨域调用本后端。 */
+function resolveCorsOrigins() {
+  const raw = process.env.CORS_ORIGINS ?? envFile.CORS_ORIGINS ?? '*';
+  return raw === '*' ? '*' : raw.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
 export const config = {
   // 默认 5399 而非 5173：后者常被 Vite 等前端脚手架占用（本机确有其它项目在用），
   // 端口重叠会导致浏览器访问到错误的站点。
   port: Number(process.env.PORT ?? envFile.PORT ?? 5399),
-  host: process.env.HOST ?? '127.0.0.1',
+  host: process.env.HOST ?? '0.0.0.0',
+
+  /** 访问口令（保护 AI 对话与报告生成） */
+  accessCode: access.code,
+  accessCodeGenerated: access.generated,
+
+  /** 跨域白名单：'*' 或逗号分隔的来源列表 */
+  corsOrigins: resolveCorsOrigins(),
 
   deepseek: {
     key: deepseek.key,

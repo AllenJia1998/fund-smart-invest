@@ -1,6 +1,7 @@
 /** 系统路由：运行状态、数据源健康、skills 挂载、tools 清单、资讯。 */
 import { existsSync } from 'node:fs';
 import { sendJson } from '../lib/http.js';
+import { authStatus, guard } from '../lib/auth.js';
 import { config, OCR_BIN, paths } from '../config.js';
 import { kbStats } from '../services/kb.js';
 import { llmStatus } from '../services/llm.js';
@@ -29,6 +30,7 @@ export function registerSystemRoutes(router) {
         skills: listSkills(),
         tools: listTools(),
         pushCron: config.pushCron,
+        access: authStatus(),
       },
     });
   });
@@ -37,7 +39,9 @@ export function registerSystemRoutes(router) {
     sendJson(res, { ok: true, data: listSkills() });
   });
 
-  router.post('/api/skills/:name/mount', async ({ res, params, body }) => {
+  router.post('/api/skills/:name/mount', async ({ res, params, body, req, url }) => {
+    const denied = guard(req, url, null);
+    if (denied) throw Object.assign(new Error(denied.error), { statusCode: denied.status });
     sendJson(res, { ok: true, data: setMounted(params.name, body.mounted !== false) });
   });
 

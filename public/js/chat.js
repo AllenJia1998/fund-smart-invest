@@ -19,6 +19,7 @@ import {
   mountShell,
   renderMarkdown,
   renderStatus,
+  handleAuthError,
 } from './app.js';
 
 /* ============================ 常量与状态 ============================ */
@@ -440,8 +441,14 @@ async function send(textOverride) {
       controller.signal
     );
   } catch (error) {
-    if (error?.name === 'AbortError') assistant.note('已停止生成');
-    else assistant.fail(String(error?.message ?? error));
+    if (error?.name === 'AbortError') {
+      assistant.note('已停止生成');
+    } else if (await handleAuthError(error, 'AI 对话')) {
+      // 口令缺失/错误或触发限流：已弹出设置引导或提示，气泡内给出简短说明
+      assistant.fail(error.message);
+    } else {
+      assistant.fail(String(error?.message ?? error));
+    }
   } finally {
     assistant.finish();
     state.abort = null;

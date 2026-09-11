@@ -1,5 +1,6 @@
 /** AI 对话路由：SSE 流式回答 + 附件解析 + 会话持久化。 */
 import { openSse, sendJson } from '../lib/http.js';
+import { chatLimiter, guard } from '../lib/auth.js';
 import { Collection, newId } from '../lib/store.js';
 import { runAgent } from '../services/agent.js';
 import { extractFile } from '../services/extract.js';
@@ -44,7 +45,18 @@ async function parseAttachments(raw = []) {
 }
 
 export function registerChatRoutes(router) {
-  router.get('/api/sessions', async ({ res }) => {
+  /** 会话读写属于对话功能的一部分，含用户会话内容，因此统一要求口令。 */
+  const requireAccess = (req, url, res) => {
+    const denied = guard(req, url, null);
+    if (denied) {
+      sendJson(res, { ok: false, error: denied.error, code: denied.code }, denied.status);
+      return true;
+    }
+    return false;
+  };
+
+  router.get('/api/sessions', async ({ res, req, url }) => {
+    if (requireAccess(req, url, res)) return;
     const list = sessionCol
       .all()
       .slice()
@@ -53,7 +65,8 @@ export function registerChatRoutes(router) {
     sendJson(res, { ok: true, data: list });
   });
 
-  router.post('/api/sessions', async ({ res, body }) => {
+  router.post('/api/sessions', async ({ res, body, req, url }) => {
+    if (requireAccess(req, url, res)) return;
     const session = sessionCol.insert({
       id: newId('sess'),
       title: body.title || '新对话',
@@ -64,19 +77,27 @@ export function registerChatRoutes(router) {
     sendJson(res, { ok: true, data: summarize(session) });
   });
 
-  router.get('/api/sessions/:id', async ({ res, params }) => {
+  router.get('/api/sessions/:id', async ({ res, params, req, url }) => {
+    if (requireAccess(req, url, res)) return;
     const session = sessionCol.find((s) => s.id === params.id);
     if (!session) return sendJson(res, { ok: false, error: '会话不存在' }, 404);
     sendJson(res, { ok: true, data: session });
   });
 
-  router.delete('/api/sessions/:id', async ({ res, params }) => {
+  router.delete('/api/sessions/:id', async ({ res, params, req, url }) => {
+    if (requireAccess(req, url, res)) return;
     const ok = sessionCol.remove(params.id);
     sendJson(res, { ok: ok, data: { id: params.id } });
   });
 
   /** 主对话入口：SSE 流式返回。 */
-  router.post('/api/chat', async ({ res, body, req }) => {
+  router.post('/api/chat', async ({ res, body, req, url }) => {
+    // 消耗 DeepSeek 额度：先校验口令，再做单 IP 频率限制
+    const denied = guard(req, url, chatLimiter);
+    if (denied) {
+      sendJson(res, { ok: false, error: denied.error, code: denied.code }, denied.status);
+      return;
+    }
     const sse = openSse(res);
     const abort = new AbortController();
     req.on('close', () => abort.abort());

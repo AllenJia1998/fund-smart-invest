@@ -4,8 +4,9 @@
  */
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync } from 'node:fs';
+import { networkInterfaces } from 'node:os';
 import { config, paths, assertConfig } from './config.js';
-import { readJsonBody, sendError, sendJson, serveStatic } from './lib/http.js';
+import { readJsonBody, applyCors, sendError, sendJson, serveStatic } from './lib/http.js';
 import { createRouter } from './lib/router.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerFundRoutes } from './routes/funds.js';
@@ -26,6 +27,9 @@ for (const dir of [paths.DATA_DIR, paths.UPLOAD_DIR, paths.SKILLS_DIR]) {
 }
 
 const server = createServer(async (req, res) => {
+  // 跨域（前端可能部署在 GitHub Pages 等其它源）+ OPTIONS 预检
+  if (applyCors(req, res)) return;
+
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   const { pathname } = url;
 
@@ -58,13 +62,26 @@ const server = createServer(async (req, res) => {
 
 server.listen(config.port, config.host, () => {
   const problems = assertConfig();
+  const lan = Object.values(networkInterfaces())
+    .flat()
+    .find((i) => i && i.family === 'IPv4' && !i.internal)?.address;
+
   console.log('');
   console.log('  基金智投 · FundSmartInvest');
   console.log('  ─────────────────────────────────────────');
-  console.log(`  ▸ 服务地址   http://${config.host}:${config.port}`);
+  console.log(`  ▸ 本机访问   http://127.0.0.1:${config.port}`);
+  if (lan) console.log(`  ▸ 局域网     http://${lan}:${config.port}`);
   console.log(`  ▸ DeepSeek   ${config.deepseek.model} / 分析模型 ${config.deepseek.analystModel}`);
   console.log(`  ▸ 凭据来源   ${config.deepseek.source}`);
   console.log(`  ▸ 数据源     ${config.fundProvider}`);
+  console.log(`  ▸ 跨域白名单 ${Array.isArray(config.corsOrigins) ? config.corsOrigins.join(', ') : config.corsOrigins}`);
+  console.log('  ─────────────────────────────────────────');
+  console.log('  🔐 访问口令（AI 对话 / 报告生成 / 会话 / 写入操作需要）');
+  console.log(`     ${config.accessCode}`);
+  if (config.accessCodeGenerated) {
+    console.log('     （本次自动生成，已保存到 data/access-code.txt，重启不变）');
+  }
+  console.log('     只读接口（行情、资讯、状态）无需口令，对公网开放。');
   console.log('  ─────────────────────────────────────────');
   if (problems.length > 0) {
     console.log('  ⚠ 需要注意：');

@@ -4,6 +4,7 @@
  */
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve, sep } from 'node:path';
+import { config } from '../config.js';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -23,8 +24,35 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
 };
 
-/** 读取并解析 JSON 请求体（上限 64MB，用于携带 base64 附件）。 */
-export async function readJsonBody(req, limit = 64 * 1024 * 1024) {
+/**
+ * 写入跨域响应头。
+ *
+ * 前端部署在 GitHub Pages（不同源）时，必须允许跨域；由于调用方会带
+ * 自定义头 X-Access-Code，浏览器会先发 OPTIONS 预检，因此需要一并放行。
+ * @returns true 表示这是预检请求且已处理完毕。
+ */
+export function applyCors(req, res) {
+  const origin = req.headers.origin;
+  const allowed = config.corsOrigins;
+  if (origin) {
+    if (allowed === '*' || (Array.isArray(allowed) && allowed.includes(origin))) {
+      res.setHeader('Access-Control-Allow-Origin', allowed === '*' ? '*' : origin);
+      if (allowed !== '*') res.setHeader('Vary', 'Origin');
+    }
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Access-Code, Authorization');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return true;
+  }
+  return false;
+}
+
+/** 读取并解析 JSON 请求体（上限 64MB，用于携带 base64 附件）。 */export async function readJsonBody(req, limit = 64 * 1024 * 1024) {
   const chunks = [];
   let size = 0;
   for await (const chunk of req) {

@@ -1,5 +1,6 @@
 /** 知识库路由：文档导入 / 列表 / 删除 / 检索。 */
 import { sendJson } from '../lib/http.js';
+import { guard } from '../lib/auth.js';
 import { addDocument, kbStats, listDocuments, removeDocument, search } from '../services/kb.js';
 
 export function registerKbRoutes(router) {
@@ -7,7 +8,9 @@ export function registerKbRoutes(router) {
     sendJson(res, { ok: true, data: { stats: kbStats(), documents: listDocuments() } });
   });
 
-  router.post('/api/kb', async ({ res, body }) => {
+  router.post('/api/kb', async ({ res, body, req, url }) => {
+    const denied = guard(req, url, null);
+    if (denied) throw Object.assign(new Error(denied.error), { statusCode: denied.status });
     const text = String(body.text ?? '').trim();
     if (!text) throw Object.assign(new Error('文档内容不能为空'), { statusCode: 400 });
     const doc = addDocument({
@@ -19,7 +22,9 @@ export function registerKbRoutes(router) {
     sendJson(res, { ok: true, data: doc });
   });
 
-  router.delete('/api/kb/:id', async ({ res, params }) => {
+  router.delete('/api/kb/:id', async ({ res, params, req, url }) => {
+    const denied = guard(req, url, null);
+    if (denied) throw Object.assign(new Error(denied.error), { statusCode: denied.status });
     sendJson(res, { ok: true, data: { removed: removeDocument(params.id) } });
   });
 
