@@ -20,12 +20,23 @@ export function registerSystemRoutes(router) {
         time: new Date().toISOString(),
         llm: llmStatus(),
         dataSource: source,
-        ocr: {
-          available: existsSync(OCR_BIN),
-          engine: 'macOS Vision（Swift 原生二进制）',
-          languages: ['zh-Hans', 'en-US'],
-          path: OCR_BIN.replace(paths.ROOT + '/', ''),
-        },
+        ocr: (() => {
+          // 注意：二进制文件存在 ≠ 能执行。tools/ocr/ocr-bin 是 macOS 专用的
+          // Mach-O 可执行文件，在 Linux（如 Render）上文件虽在仓库里却无法运行。
+          // 必须同时判断平台，否则状态页会谎报可用性。
+          const onMac = process.platform === 'darwin';
+          const present = existsSync(OCR_BIN);
+          const usable = onMac && present;
+          return {
+            available: usable,
+            engine: 'macOS Vision（Swift 原生二进制）',
+            languages: usable ? ['zh-Hans', 'en-US'] : [],
+            path: OCR_BIN.replace(paths.ROOT + '/', ''),
+            reason: usable
+              ? null
+              : `当前平台为 ${process.platform}，图片 OCR 依赖 macOS Vision 框架，不可用；文档解析不受影响。`,
+          };
+        })(),
         kb: kbStats(),
         skills: listSkills(),
         tools: listTools(),

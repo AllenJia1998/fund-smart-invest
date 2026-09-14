@@ -14,6 +14,7 @@ import { registerKbRoutes } from './routes/kb.js';
 import { registerPushRoutes } from './routes/push.js';
 import { registerSystemRoutes } from './routes/system.js';
 import { startScheduler } from './services/push.js';
+import { autoSeedKnowledgeBase } from './services/seed.js';
 
 const router = createRouter();
 registerSystemRoutes(router);
@@ -88,5 +89,7 @@ server.listen(config.port, config.host, () => {
     for (const p of problems) console.log(p);
   }
   console.log('');
+  const seedResult = autoSeedKnowledgeBase();
+  if (seedResult.seeded > 0) console.log(`  📚 知识库自动初始化：${seedResult.reason}`);
   startScheduler();
 });
