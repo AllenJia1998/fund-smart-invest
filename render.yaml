@@ -21,4 +21,4 @@ services:
       - key: ACCESS_CODE
         sync: false           # 建议自定义一个访问口令
       - key: NODE_VERSION
-        value: 22.11.0
+        value: "22"
