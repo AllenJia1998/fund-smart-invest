@@ -57,7 +57,14 @@ export function fmtSize(bytes) {
  *   2. js/config.js 注入的 window.__API_BASE__
  *   3. 空字符串 = 与后端同源（本地直接访问时）
  */
-const BACKEND_KEY = 'fsi_api_base';
+// v2：修复旧版本会把「自动探测到的地址」误写进存储的问题。
+// 换 key 名可让浏览器里的旧脏数据自然失效，用户无需手动清理。
+const BACKEND_KEY = 'fsi_api_base_v2';
+try {
+  localStorage.removeItem('fsi_api_base'); // 清理旧版遗留的脏数据
+} catch {
+  /* 隐私模式下 localStorage 可能不可用 */
+}
 
 export function getApiBase() {
   const stored = localStorage.getItem(BACKEND_KEY);
