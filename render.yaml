@@ -1,0 +1,24 @@
+# Render.com 蓝图：一键把「基金智投」后端部署为永久在线的 Web 服务。
+# 使用：在 Render 控制台 → New → Blueprint → 选择本仓库 → 部署。
+# 部署后在环境变量里填 DEEPSEEK_API_KEY 即可。
+services:
+  - type: web
+    name: fund-smart-invest
+    runtime: node
+    plan: free
+    buildCommand: "npm install --no-audit --no-fund"
+    startCommand: "node server/index.js"
+    healthCheckPath: /
+    envVars:
+      - key: DEEPSEEK_API_KEY
+        sync: false           # 由使用者在 Render 控制台手动填写
+      - key: DEEPSEEK_MODEL
+        value: deepseek-flash
+      - key: DEEPSEEK_ANALYST_MODEL
+        value: deepseek-v4-pro
+      - key: FUND_PROVIDER
+        value: eastmoney
+      - key: ACCESS_CODE
+        sync: false           # 建议自定义一个访问口令
+      - key: NODE_VERSION
+        value: 22.11.0
