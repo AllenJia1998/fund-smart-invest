@@ -15,7 +15,7 @@
  */
 (function () {
   // ↓ 后端隧道地址，隧道重启后会变化，重新部署或改这里即可
-  var REMOTE_BACKEND = 'https://lists-joshua-beneficial-illustrations.trycloudflare.com';
+  var REMOTE_BACKEND = 'https://fund-smart-invest-4tt3.onrender.com';
 
   var onGithubPages = /\.github\.io$/i.test(location.hostname);
   window.__API_BASE__ = onGithubPages ? REMOTE_BACKEND : '';
