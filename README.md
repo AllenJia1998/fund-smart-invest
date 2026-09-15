@@ -330,3 +330,77 @@ Cloudflare 快速隧道（`trycloudflare.com`）**无需账号**，但：
 ```bash
 CORS_ORIGINS=https://allenjia1998.github.io npm start
 ```
+
+---
+
+## 十、数据持久化（Turso）
+
+### 为什么需要
+
+Render / Railway 等云平台的**免费实例文件系统是临时的**：
+
+- 空闲 15 分钟休眠，下次唤醒时容器重建 → `data/` 被清空
+- 每次代码重新部署 → `data/` 同样被清空
+
+结果是**每日推送报告、AI 对话历史、自选基金、知识库自建文档、技能挂载开关全部丢失**
+（访问口令与 API Key 走环境变量，不受影响）。
+
+### 解决方式：接 Turso（SQLite 云，免费）
+
+后端支持把数据落到 Turso。配置后：读走内存（快），写同时落本地文件（兜底）
+并按防抖异步推送到 Turso（远端权威副本）；启动时用远端数据注水内存。
+
+**未配置时行为不变**，仍使用本地 JSON 文件，本地开发无需任何设置。
+
+### 获取 Turso 凭据
+
+1. 用 GitHub 账号在 <https://turso.tech> 注册（免费，无需信用卡）
+2. 控制台 **Create Database**：名称如 `fund-smart-invest`，区域选东京 `aws-ap-northeast-1` 或新加坡
+3. 复制 **Database URL**（形如 `libsql://fund-smart-invest-<你的组织>.turso.io`）
+4. 为该数据库 **Create Token**，复制令牌
+
+> ⚠️ 需要的是**数据库令牌（Database Token）**，不是平台 API Token。
+
+### 配置
+
+本地（可选）：写入 `.env`
+```bash
+TURSO_URL=libsql://fund-smart-invest-xxx.turso.io
+TURSO_TOKEN=eyJhbGciOi...
+```
+
+云平台：在 Render 控制台 **Environment** 添加同名两个变量，保存后自动重新部署。
+
+### 验证
+
+```bash
+npm run check-storage
+```
+
+会依次验证：配置读取 → 建表 → 写入 → 读取 → 清理。全部通过即表示持久化生效。
+
+运行时也可查看 `GET /api/status` 的 `storage` 字段：
+
+```json
+{ "backend": "turso", "tursoConfigured": true, "health": { "ok": true } }
+```
+
+`backend` 为 `turso` 即表示远端持久化已启用；若为 `local` 且带了
+`fallbackReason`，说明配置了但连不上，服务已自动退回本地文件模式（不会中断服务）。
+
+### 存储结构
+
+单个表 `fsi_kv`（key-value）：
+
+| 列 | 说明 |
+|---|---|
+| `k` | 键，形如 `collection:reports` |
+| `v` | 该集合的 JSON 数组 |
+| `updated_at` | 更新时间戳 |
+
+集合名：`watchlist`（自选）、`reports`（日报）、`sessions`（对话）、
+`kb-docs`（知识库）、`skill-mounts`（技能挂载）。
+
+### 首次启用会自动迁移
+
+若远端为空但本地 `data/` 已有数据，启动时会自动把本地数据播种到 Turso，无需手工导入。

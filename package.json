@@ -11,7 +11,8 @@
     "seed": "node scripts/seed-kb.js",
     "code": "bash scripts/show-code.sh",
     "tunnel": "bash scripts/tunnel.sh",
-    "deploy": "bash scripts/deploy-pages.sh"
+    "deploy": "bash scripts/deploy-pages.sh",
+    "check-storage": "node scripts/check-storage.js"
   },
   "engines": {
     "node": ">=20.19.0"

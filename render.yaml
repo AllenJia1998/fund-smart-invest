@@ -20,5 +20,9 @@ services:
         value: eastmoney
       - key: ACCESS_CODE
         sync: false           # 建议自定义一个访问口令
+      - key: TURSO_URL
+        sync: false           # 持久化：Turso 数据库地址（不填则数据重启即丢）
+      - key: TURSO_TOKEN
+        sync: false           # 持久化：Turso 数据库令牌
       - key: NODE_VERSION
         value: "22"

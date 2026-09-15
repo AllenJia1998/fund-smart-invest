@@ -8,6 +8,7 @@ import { networkInterfaces } from 'node:os';
 import { config, paths, assertConfig } from './config.js';
 import { readJsonBody, applyCors, sendError, sendJson, serveStatic } from './lib/http.js';
 import { createRouter } from './lib/router.js';
+import { initStore } from './lib/store.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerFundRoutes } from './routes/funds.js';
 import { registerKbRoutes } from './routes/kb.js';
@@ -61,6 +62,13 @@ const server = createServer(async (req, res) => {
   }
 });
 
+// 启动前先从存储后端注水（Turso 或本地文件），必须在接受请求之前完成，
+// 否则首屏会读到空数据。
+const storeInfo = await initStore().catch((error) => {
+  console.warn(`[store] 初始化失败，退回本地文件模式：${error.message}`);
+  return { backend: 'local', reason: String(error?.message ?? error) };
+});
+
 server.listen(config.port, config.host, () => {
   const problems = assertConfig();
   const lan = Object.values(networkInterfaces())
@@ -75,6 +83,9 @@ server.listen(config.port, config.host, () => {
   console.log(`  ▸ DeepSeek   ${config.deepseek.model} / 分析模型 ${config.deepseek.analystModel}`);
   console.log(`  ▸ 凭据来源   ${config.deepseek.source}`);
   console.log(`  ▸ 数据源     ${config.fundProvider}`);
+  console.log(
+    `  ▸ 持久化     ${storeInfo.backend === 'turso' ? 'Turso 云数据库（重启不丢）' : '本地 JSON 文件（云平台重启会丢）'}`
+  );
   console.log(`  ▸ 跨域白名单 ${Array.isArray(config.corsOrigins) ? config.corsOrigins.join(', ') : config.corsOrigins}`);
   console.log('  ─────────────────────────────────────────');
   console.log('  🔐 访问口令（AI 对话 / 报告生成 / 会话 / 写入操作需要）');

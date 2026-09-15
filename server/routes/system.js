@@ -1,6 +1,8 @@
 /** 系统路由：运行状态、数据源健康、skills 挂载、tools 清单、资讯。 */
 import { existsSync } from 'node:fs';
 import { sendJson } from '../lib/http.js';
+import { storeStatus } from '../lib/store.js';
+import { tursoHealth } from '../lib/turso.js';
 import { authStatus, guard } from '../lib/auth.js';
 import { config, OCR_BIN, paths } from '../config.js';
 import { kbStats } from '../services/kb.js';
@@ -37,6 +39,7 @@ export function registerSystemRoutes(router) {
               : `当前平台为 ${process.platform}，图片 OCR 依赖 macOS Vision 框架，不可用；文档解析不受影响。`,
           };
         })(),
+        storage: { ...storeStatus(), health: await tursoHealth() },
         kb: kbStats(),
         skills: listSkills(),
         tools: listTools(),

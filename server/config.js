@@ -110,6 +110,16 @@ export const config = {
   /** 跨域白名单：'*' 或逗号分隔的来源列表 */
   corsOrigins: resolveCorsOrigins(),
 
+  /**
+   * 持久化存储（可选）。
+   * 云平台（Render 免费实例等）的文件系统是临时的，重启即清空，
+   * 因此把数据落到 Turso（SQLite 云）上。未配置时退回本地 JSON 文件。
+   */
+  turso: {
+    url: process.env.TURSO_URL ?? envFile.TURSO_URL ?? '',
+    token: process.env.TURSO_TOKEN ?? envFile.TURSO_TOKEN ?? '',
+  },
+
   deepseek: {
     key: deepseek.key,
     source: deepseek.source,
